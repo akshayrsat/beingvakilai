@@ -3,9 +3,8 @@
 import React, { useState, useRef } from "react";
 import {
   Shield, FileText, Scale, Brain, MessageSquare, AlertTriangle, 
-  RefreshCw, CheckCircle2, UploadCloud, ArrowRight, Sparkles, Layers3
+  RefreshCw, CheckCircle2, UploadCloud, ArrowRight, Sparkles, Layers3, X
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 const MOCK_CLAUSES = [
   {
@@ -34,194 +33,121 @@ export default function BeingVakilPlatform() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState(null);
-  const fileInputRef = useRef(null);
-
   const [chatHistory, setChatHistory] = useState([
-    { sender: "ai", message: "Hello! I am BeingVakil AI. Please upload a contract so I can begin my legal analysis." }
+    { sender: "ai", message: "Hello! I am BeingVakil AI. Please upload a contract to begin." }
   ]);
 
-  // 1. This opens your computer's file window
-  const triggerFileSelect = () => {
+  const fileInputRef = useRef(null);
+
+  // 1. Force the file window to open
+  const handleBoxClick = () => {
+    if (isUploading) return;
+    console.log("Upload box clicked. Opening file picker...");
     fileInputRef.current?.click();
   };
 
-  // 2. This runs after you pick a file
+  // 2. ONLY start after a file is chosen
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
+      console.log("File selected:", file.name);
       setSelectedFile(file.name);
-      startSimulation();
+      
+      // Start the progress animation
+      setIsUploading(true);
+      setUploadProgress(0);
+      
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        setUploadProgress(progress);
+        if (progress >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setIsUploading(false);
+            setSubTab("review"); // Move to results
+            setChatHistory(prev => [...prev, { 
+              sender: "ai", 
+              message: `I have finished analyzing ${file.name}. View the "Review" tab to see the risks found.` 
+            }]);
+          }, 800);
+        }
+      }, 150);
     }
   };
 
-  // 3. This runs the "Analyzing" animation
-  const startSimulation = () => {
-    setIsUploading(true);
+  const resetUpload = () => {
+    setSelectedFile(null);
+    setIsUploading(false);
     setUploadProgress(0);
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      setUploadProgress(progress);
-      if (progress >= 100) {
-        clearInterval(interval);
-        setTimeout(() => {
-          setIsUploading(false);
-          setSubTab("review");
-          setChatHistory(prev => [...prev, { 
-            sender: "ai", 
-            message: `Analysis complete for ${selectedFile || "document"}. I found 2 high-risk clauses in the Liability and IP sections.` 
-          }]);
-        }, 800);
-      }
-    }, 200);
+    setSubTab("overview");
   };
 
   const LandingPage = () => (
-    <div className="bg-slate-950 text-white min-h-screen font-sans">
-      <nav className="p-6 flex justify-between items-center max-w-7xl mx-auto">
+    <div className="bg-slate-950 text-white min-h-screen">
+      <nav className="p-6 flex justify-between items-center max-w-7xl mx-auto border-b border-slate-900">
         <div className="flex items-center gap-2 font-bold text-xl">
            <Scale className="text-blue-500" /> BeingVakil AI
         </div>
-        <button onClick={() => setView("dashboard")} className="text-sm font-semibold bg-blue-600 px-5 py-2 rounded-lg">Sign In</button>
+        <button onClick={() => setView("dashboard")} className="bg-blue-600 px-6 py-2 rounded-xl font-bold">Launch App</button>
       </nav>
-      <section className="pt-24 pb-20 px-6 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-bold mb-8">
-          <Sparkles size={14} /> Powered by Next-Gen Legal RAG
-        </div>
-        <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight">
-          Review Contracts <span className="text-blue-500">10x Faster</span>
-        </h1>
-        <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10">
-          Upload any legal document. Our AI extracts risks, summarizes clauses, and suggests redlines in seconds.
-        </p>
-        <button onClick={() => setView("dashboard")} className="px-8 py-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold transition-all flex items-center gap-2 mx-auto">
-            Get Started Free <ArrowRight size={18} />
+      <header className="pt-32 pb-20 px-6 text-center">
+        <h1 className="text-6xl font-extrabold mb-6 tracking-tighter">Legal AI for <span className="text-blue-500">Fast Teams</span></h1>
+        <p className="text-slate-400 text-xl max-w-2xl mx-auto mb-10">Intelligent contract summarization and risk detection for modern legal operations.</p>
+        <button onClick={() => setView("dashboard")} className="px-10 py-5 bg-blue-600 rounded-2xl font-bold text-lg flex items-center gap-2 mx-auto hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/20">
+            Open Workspace <ArrowRight />
         </button>
-      </section>
+      </header>
     </div>
   );
 
   const Dashboard = () => (
     <div className="flex h-screen bg-slate-900 text-slate-200">
-      {/* Hidden File Input */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        className="hidden" 
-        accept=".pdf,.docx,.txt"
-      />
-
       <aside className="w-64 border-r border-slate-800 bg-slate-950 p-6 flex flex-col gap-8">
         <div onClick={() => setView("landing")} className="flex items-center gap-2 font-bold text-xl text-white cursor-pointer">
-          <Scale className="text-blue-500" /> BeingVakil AI
+          <Scale className="text-blue-500" /> BeingVakil
         </div>
         <nav className="flex flex-col gap-2">
-          {["overview", "review", "chat"].map((tab) => (
-            <button key={tab} onClick={() => setSubTab(tab)} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold capitalize transition-all ${subTab === tab ? "bg-blue-600 text-white" : "hover:bg-slate-900 text-slate-400"}`}>
-              {tab === "overview" && <Layers3 size={18} />}
-              {tab === "review" && <FileText size={18} />}
-              {tab === "chat" && <MessageSquare size={18} />}
-              {tab}
+          {["overview", "review", "chat"].map((t) => (
+            <button key={t} onClick={() => setSubTab(t)} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold capitalize transition-all ${subTab === t ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-900"}`}>
+              {t === "overview" && <Layers3 size={18} />}
+              {t === "review" && <FileText size={18} />}
+              {t === "chat" && <MessageSquare size={18} />}
+              {t}
             </button>
           ))}
         </nav>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 p-8 overflow-y-auto">
         {subTab === "overview" && (
-          <div className="max-w-4xl mx-auto text-center py-20">
-            <h2 className="text-3xl font-bold mb-4">Contract Workspace</h2>
-            <p className="text-slate-400 mb-8">Upload your legal document to begin AI processing.</p>
+          <div className="max-w-2xl mx-auto text-center py-20">
+            <h2 className="text-3xl font-bold mb-4">Start New Analysis</h2>
+            <p className="text-slate-400 mb-10">Select a contract (PDF/DOCX) from your computer.</p>
             
-            <div className="border-2 border-dashed border-slate-700 rounded-3xl p-12 bg-slate-950/50 hover:border-blue-500/50 transition-all cursor-pointer" onClick={triggerFileSelect}>
-              <UploadCloud size={48} className="mx-auto text-slate-500 mb-4" />
+            {/* FILE INPUT HIDDEN */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              className="hidden" 
+              accept=".pdf,.docx,.txt" 
+            />
+
+            <div 
+              onClick={handleBoxClick}
+              className={`border-2 border-dashed rounded-3xl p-16 transition-all cursor-pointer ${isUploading ? 'border-blue-500 bg-blue-500/5' : 'border-slate-700 bg-slate-950/50 hover:border-blue-500/50'}`}
+            >
               {isUploading ? (
-                <div className="w-full max-w-xs mx-auto">
-                  <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                <div className="space-y-4">
+                  <RefreshCw className="mx-auto text-blue-500 animate-spin" size={40} />
+                  <p className="font-bold text-blue-400">Analyzing: {selectedFile}</p>
+                  <div className="h-2 w-48 mx-auto bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 transition-all" style={{ width: `${uploadProgress}%` }} />
                   </div>
-                  <p className="text-xs mt-2 text-blue-400 font-bold">AI Analyzing: {uploadProgress}%</p>
                 </div>
               ) : (
-                <>
-                  <p className="text-white font-bold mb-2">Click to select a file</p>
-                  <p className="text-xs text-slate-500 uppercase">PDF, DOCX, or TXT</p>
-                </>
-              )}
-            </div>
-
-            {selectedFile && !isUploading && (
-              <div className="mt-6 inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-full text-emerald-400 text-sm">
-                <CheckCircle2 size={16} /> Ready: {selectedFile}
-              </div>
-            )}
-          </div>
-        )}
-
-        {subTab === "review" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-slate-950 rounded-2xl border border-slate-800 p-6 h-[70vh] overflow-y-auto">
-              <h3 className="text-white font-bold mb-4 border-b border-slate-800 pb-2 flex items-center gap-2">
-                <FileText size={16} className="text-blue-500" /> {selectedFile || "Document View"}
-              </h3>
-              <div className="space-y-4 text-slate-400 text-sm font-serif">
-                 <p className="p-3 bg-rose-500/5 border border-rose-500/20 rounded"><strong>Section 14. Limitation of Liability:</strong> Vendor's maximum aggregate liability shall be unlimited for any and all claims, damages, or losses...</p>
-                 <p><strong>Section 15. Termination:</strong> Either party may terminate with 30 days notice...</p>
-                 <p className="p-3 bg-amber-500/5 border border-amber-500/20 rounded"><strong>Section 8. IP:</strong> All intellectual property created shall be owned exclusively by the Vendor...</p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <h3 className="text-white font-bold mb-2">AI Risk Assessment</h3>
-              {MOCK_CLAUSES.map((c) => (
-                <div key={c.id} className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="font-bold text-white">{c.title}</span>
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold ${c.riskLevel === 'Critical' ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                      {c.riskLevel}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 mb-3 italic">"{c.text}"</p>
-                  <p className="text-sm text-slate-300"><strong className="text-blue-400">Issue:</strong> {c.explanation}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {subTab === "chat" && (
-          <div className="max-w-3xl mx-auto h-[70vh] flex flex-col bg-slate-950 rounded-3xl border border-slate-800 overflow-hidden">
-            <div className="flex-1 p-6 overflow-y-auto space-y-4">
-              {chatHistory.map((m, i) => (
-                <div key={i} className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${m.sender === "user" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-200 shadow-lg"}`}>
-                    {m.message}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="p-4 bg-slate-900 border-t border-slate-800 flex gap-2">
-              <input 
-                type="text" placeholder="Ask about the contract..." 
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const val = e.currentTarget.value;
-                    if (!val) return;
-                    setChatHistory(prev => [...prev, { sender: "user", message: val }]);
-                    e.currentTarget.value = "";
-                    setTimeout(() => {
-                      setChatHistory(prev => [...prev, { sender: "ai", message: `Searching ${selectedFile || "document"}... Section 14 states liability is unlimited.` }]);
-                    }, 1000);
-                  }
-                }}
-              />
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
-  );
-
-  return view === "landing" ? <LandingPage /> : <Dashboard />;
-}
+                <div className="space-y-4">
+                  <UploadCloud size={50} className="mx-auto text-slate-500" />
+                  <p className="text-white font-bold">Click to pick a contract</p>
+                  <
